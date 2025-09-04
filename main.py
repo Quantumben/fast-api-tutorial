@@ -1,7 +1,6 @@
-from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi import FastAPI, HTTPException, Depends
 from datetime import datetime, timezone
-from typing import Any, Annotated, Generic, TypeVar
-from random import randint
+from typing import Annotated, Generic, TypeVar
 from sqlmodel import SQLModel, create_engine, Session, select, Field
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -46,37 +45,6 @@ app = FastAPI(root_path="/api/v1", lifespan=lifespan)
 async def root():
     return {"message": "Hello World"}
 
-data : Any = [
-    {
-        "campaign_id": 1,
-        "name": "Summer Launch",
-        "due_date": datetime.now(),
-        "created_at": datetime.now()
-    },
-    {
-        "campaign_id": 2,
-        "name": "Black Friday",
-        "due_date": datetime.now(),
-        "created_at": datetime.now()
-    }
-    ,{
-        "campaign_id": 3,
-        "name": "Campaign 3",
-        "due_date": datetime.now(),
-        "created_at": datetime.now()
-    }
-]
-
-"""
-Campaign
-- campaign_id: int
-- name: str
-- due_date: datetime
-- created_at: datetime
-"""
-
-
-
 T = TypeVar("T")
 
 class Response(BaseModel, Generic[T]):
@@ -107,26 +75,22 @@ async def create_campaign(body: CampaignCreate, session: SessionDep):
     session.refresh(db_campaign)
     return {"data": db_campaign}
 
+@app.put("/campaigns/{campaign_id}", response_model=Response[Campaign])
+async def update_campaign(campaign_id: int, body: CampaignCreate, session: SessionDep):
+    data = session.get(Campaign, campaign_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    data.name = body.name
+    data.due_date = body.due_date
+    session.add(data)
+    session.commit()
+    session.refresh(data)
+    return {"data": data}
 
-
-# @app.put("/campaigns/{campaign_id}")
-# async def update_campaign(campaign_id: int, body: dict[str, Any]):
-#     for index, campaign in enumerate(data):
-#         if campaign["campaign_id"] == campaign_id:
-#                     updated : Any = {
-#                         "campaign_id": campaign_id,
-#                         "name": body.get("name"),
-#                         "due_date": body.get("due_date"),
-#                         "created_at": campaign.get("created_at")
-#                     }
-#                     data[index] = updated
-#                     return {"campaign": updated}
-#     raise HTTPException(status_code=404, detail="Campaign not found")
-
-# @app.delete("/campaigns/{campaign_id}")
-# async def delete_campaign(campaign_id: int):
-#     for index, campaign in enumerate(data):
-#         if campaign["campaign_id"] == campaign_id:
-#                     updated : Any = data.pop(index)
-#                     return Response(status_code=204, content=None)
-#     raise HTTPException(status_code=404, detail="Campaign not found")
+@app.delete("/campaigns/{campaign_id}", status_code=204)
+async def delete_campaign(campaign_id: int, session: SessionDep):
+    data = session.get(Campaign, campaign_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    session.delete(data)
+    session.commit()
