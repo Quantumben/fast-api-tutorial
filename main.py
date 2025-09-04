@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from datetime import datetime
 from typing import Any
 app = FastAPI(root_path="/api/v1")
@@ -41,3 +41,9 @@ async def read_campaigns():
     return {"campaigns": data}
 
 
+@app.get("/campaigns/{campaign_id}")
+async def read_campaign(campaign_id: int):
+    for campaign in data:
+        if campaign["campaign_id"] == campaign_id:
+            return {"campaign": data[campaign_id - 1]}
+    raise HTTPException(status_code=404, detail="Campaign not found")
