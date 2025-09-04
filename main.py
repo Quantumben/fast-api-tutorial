@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from datetime import datetime
 from typing import Any
 from random import randint
@@ -49,7 +49,7 @@ async def read_campaign(campaign_id: int):
             return {"campaign": data[campaign_id - 1]}
     raise HTTPException(status_code=404, detail="Campaign not found")
 
-@app.post("/campaigns")
+@app.post("/campaigns", status_code=201)
 async def create_campaign(body: dict[str, Any]):
     new : Any = {
         "campaign_id": randint(100, 1000),
@@ -73,4 +73,12 @@ async def update_campaign(campaign_id: int, body: dict[str, Any]):
                     }
                     data[index] = updated
                     return {"campaign": updated}
+    raise HTTPException(status_code=404, detail="Campaign not found")
+
+@app.delete("/campaigns/{campaign_id}")
+async def delete_campaign(campaign_id: int):
+    for index, campaign in enumerate(data):
+        if campaign["campaign_id"] == campaign_id:
+                    updated : Any = data.pop(index)
+                    return Response(status_code=204, content=None)
     raise HTTPException(status_code=404, detail="Campaign not found")
