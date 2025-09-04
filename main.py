@@ -63,9 +63,14 @@ async def create_campaign(body: dict[str, Any]):
 
 @app.put("/campaigns/{campaign_id}")
 async def update_campaign(campaign_id: int, body: dict[str, Any]):
-    for campaign in data:
+    for index, campaign in enumerate(data):
         if campaign["campaign_id"] == campaign_id:
-            campaign["name"] = body.get("name", campaign["name"])
-            campaign["due_date"] = body.get("due_date", campaign["due_date"])
-            return {"campaign": campaign}
+                    updated : Any = {
+                        "campaign_id": campaign_id,
+                        "name": body.get("name"),
+                        "due_date": body.get("due_date"),
+                        "created_at": campaign.get("created_at")
+                    }
+                    data[index] = updated
+                    return {"campaign": updated}
     raise HTTPException(status_code=404, detail="Campaign not found")
