@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException, Request, Response, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends
 from datetime import datetime, timezone
-from typing import Any, Annotated
+from typing import Any, Annotated, Generic, TypeVar
 from random import randint
 from sqlmodel import SQLModel, create_engine, Session, select, Field
 from contextlib import asynccontextmanager
@@ -75,38 +75,39 @@ Campaign
 - created_at: datetime
 """
 
-class CampaignResponse(BaseModel):
-    campaigns: list[Campaign]
 
-@app.get("/campaigns", response_model=CampaignResponse)
+
+T = TypeVar("T")
+
+class Response(BaseModel, Generic[T]):
+    data: T
+
+class CampaignCreate(SQLModel):
+    name: str
+    due_date: datetime | None = None
+
+@app.get("/campaigns", response_model=Response[list[Campaign]])
 async def read_campaigns(session: SessionDep):
     data = session.exec(select(Campaign)).all()
-    return {"campaigns": data}
+    return {"data": data}
+
+@app.get("/campaigns/{campaign_id}", response_model=Response[Campaign])
+async def read_campaign(campaign_id: int, session: SessionDep):
+    data = session.get(Campaign, campaign_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return {"data": data}
+
+@app.post("/campaigns", response_model=Response[Campaign], status_code=201)
+async def create_campaign(body: CampaignCreate, session: SessionDep):
+    new_campaign = Campaign(name=body.name, due_date=body.due_date)
+    db_campaign = Campaign.model_validate(new_campaign)
+    session.add(db_campaign)
+    session.commit()
+    session.refresh(db_campaign)
+    return {"data": db_campaign}
 
 
-# @app.get("/campaigns")
-# async def read_campaigns():
-#     return {"campaigns": data}
-
-
-# @app.get("/campaigns/{campaign_id}")
-# async def read_campaign(campaign_id: int):
-#     for campaign in data:
-#         if campaign["campaign_id"] == campaign_id:
-#             return {"campaign": data[campaign_id - 1]}
-#     raise HTTPException(status_code=404, detail="Campaign not found")
-
-# @app.post("/campaigns", status_code=201)
-# async def create_campaign(body: dict[str, Any]):
-#     new : Any = {
-#         "campaign_id": randint(100, 1000),
-#         "name": body.get("name"),
-#         "due_date": body.get("due_date"),
-#         "created_at": datetime.now()
-#     }
-
-#     data.append(new)
-#     return {"campaign": new}
 
 # @app.put("/campaigns/{campaign_id}")
 # async def update_campaign(campaign_id: int, body: dict[str, Any]):
