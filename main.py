@@ -4,6 +4,7 @@ from typing import Any, Annotated
 from random import randint
 from sqlmodel import SQLModel, create_engine, Session, select, Field
 from contextlib import asynccontextmanager
+from pydantic import BaseModel
 
 class Campaign(SQLModel, table=True):
     campaign_id: int | None = Field(default=None, primary_key=True)
@@ -74,7 +75,10 @@ Campaign
 - created_at: datetime
 """
 
-@app.get("/campaigns")
+class CampaignResponse(BaseModel):
+    campaigns: list[Campaign]
+
+@app.get("/campaigns", response_model=CampaignResponse)
 async def read_campaigns(session: SessionDep):
     data = session.exec(select(Campaign)).all()
     return {"campaigns": data}
