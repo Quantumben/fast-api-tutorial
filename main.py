@@ -22,16 +22,16 @@ def create_db_and_tables():
 
 def get_session():
     with Session(engine) as session:
-        with Session(engine) as session:
-            if not session.exec(Campaign).first():
-                session.add_all([
-                                Campaign(name="Summer Launch", due_date=datetime.now()),
-                                Campaign(name="Black Friday", due_date=datetime.now())
-                            ])
-                session.commit()
-        yield
+        if not session.exec(select(Campaign)).first():
+            session.add_all([
+                Campaign(name="Summer Launch", due_date=datetime.now()),
+                Campaign(name="Black Friday", due_date=datetime.now())
+            ])
+            session.commit()
+        yield session
 
 SessionDep = Annotated[Session, Depends(get_session)]
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -73,6 +73,12 @@ Campaign
 - due_date: datetime
 - created_at: datetime
 """
+
+@app.get("/campaigns")
+async def read_campaigns(session: SessionDep):
+    data = session.exec(select(Campaign)).all()
+    return {"campaigns": data}
+
 
 # @app.get("/campaigns")
 # async def read_campaigns():
