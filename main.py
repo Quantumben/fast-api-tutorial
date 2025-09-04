@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from datetime import datetime
-
+from typing import Any
 app = FastAPI(root_path="/api/v1")
 
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
 
-data = [
+data : Any = [
     {
         "campaign_id": 1,
         "name": "Summer Launch",
